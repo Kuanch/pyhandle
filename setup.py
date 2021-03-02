@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-VERSION = '0.0.01'
+VERSION = '0.0.1'
 
 # ml, short for `metric learning`
 MODULE_NAME = 'pyhandle'
@@ -21,7 +21,7 @@ install_requires = [
 
 
 setup_info = dict(
-    name='pytorch handle',
+    name='pyhandle',
     author=AUTHORS,
     version=VERSION,
     description='Pytorch applications',
@@ -30,7 +30,7 @@ setup_info = dict(
     url='https://github.com/Kuanch/pyhandle',
     install_requires=install_requires,
     include_package_data=True,
-    packages=find_packages()
+    packages=find_packages(),
 )
 # Install evaluation
 setup(**setup_info)
