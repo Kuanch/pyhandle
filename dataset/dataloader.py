@@ -1,18 +1,6 @@
 import torch
 import torchvision.datasets
 import torchvision.transforms as transforms
-from tfrecord.torch.dataset import TFRecordDataset
-
-
-class TFRecordLoader(object):
-    def __init__(self, tfrecord_path, description=None, index_path=None, batch_size=16, transform_fn=None):
-        if description is None:
-            description = {"image": "byte", "label": "float"}
-        self.dataset = TFRecordDataset(tfrecord_path, index_path, description, transform=transform_fn)
-        self.loader = torch.utils.data.DataLoader(self.dataset, batch_size=batch_size)
-
-    def read(self):
-        return next(iter(self.loader))
 
 
 class TorchLoader(object):
