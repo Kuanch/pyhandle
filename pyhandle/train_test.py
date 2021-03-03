@@ -13,6 +13,7 @@ class InitArgments(object):
         self.training_epoch = 1
         self.train_batch_size = 32
         self.test_batch_size = 128
+        self.num_classes = 10
 
     def load(self, json_path):
         raise NotImplementedError

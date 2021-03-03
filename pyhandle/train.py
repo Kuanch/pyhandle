@@ -53,7 +53,7 @@ def train_loop(training_setup, epoch):
 
 def training_setup(args):
     training_setup = {}
-    training_setup['model'] = network.get_classifier(args.model_name, num_classes=10).cuda()
+    training_setup['model'] = network.get_classifier(args.model_name, num_classes=args.num_classes).cuda()
     training_setup['dataset'] = dataloader.TorchLoader(args.dataset_name, train_batch_size=args.train_batch_size, test_batch_size=args.test_batch_size)
     training_setup['criterion'] = nn.CrossEntropyLoss()
     training_setup['optimizer'] = optim.SGD(training_setup['model'].parameters(), lr=0.001, momentum=0.9)
@@ -71,6 +71,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_name', default='resnet18')
     parser.add_argument('--dataset_name', default='CIFAR10')
+    parser.add_argument('--num_classes', type=int, default=10)
     parser.add_argument('--dataset_path', default=None)
     parser.add_argument('--training_epoch', type=int, default=1)
     parser.add_argument('--train_batch_size', type=int, default=32)
