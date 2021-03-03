@@ -10,27 +10,32 @@ from dataset import dataloader
 from utils.eval_utils import eval_for_one_epoch
 
 
-def train_for_one_epoch(model, criterion, optimizer, dataset, writer, epoch):
-    running_loss = 0.
-    total_step = len(dataset.train_loader)
-    step_to_draw_loss = int(total_step / 1000) + 1
-    for step in range(total_step):
-        inputs, labels = dataset.read_train()
+def train_for_one_step(model, criterion, optimizer, dataset, loss_container):
+    inputs, labels = dataset.read_train()
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
+    # zero the parameter gradients
+    optimizer.zero_grad()
 
-        # forward + backward + optimize
-        outputs = model(inputs)
+    # forward + backward + optimize
+    outputs = model(inputs)
 
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        running_loss += loss.item()
+    loss = criterion(outputs, labels)
+    loss.backward()
+    optimizer.step()
+    loss_container[0] = loss.item()
 
-        if step % step_to_draw_loss == 0:
-            writer.add_scalar("Loss/train", loss, step)
-        del loss
+    del loss
+
+
+def train_for_one_epoch(model, criterion, optimizer, dataset, epoch, writer=None):
+    losses = [0.]
+    step_per_epoch = len(dataset.train_loader)
+    step_to_draw_loss = int(step_per_epoch / 1000) + 1
+    for step in range(step_per_epoch):
+        train_for_one_step(model, criterion, optimizer, dataset, losses)
+
+        if writer is not None and step % step_to_draw_loss == 0:
+            writer.add_scalar("Loss/train", losses[0], step + epoch * step_per_epoch)
 
 
 def train_loop(training_setup, epoch):
