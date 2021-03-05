@@ -8,6 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from net import network
 from dataset import dataloader
 from utils.eval_utils import eval_for_one_epoch
+from utils.pytorch_utils import save_model
 
 
 def train_for_one_step(model, criterion, optimizer, dataset, loss_container):
@@ -39,9 +40,13 @@ def train_for_one_epoch(model, criterion, optimizer, dataset, epoch, writer=None
 
 
 def train_loop(training_setup, epoch):
+    model = training_setup['model']
+    criterion = training_setup['criterion']
+    optim = training_setup['optimizer']
+    dataset = training_setup['dataset']
     writer = training_setup['writer']
     for e in range(epoch):
-        train_for_one_epoch(**training_setup, epoch=e)
+        train_for_one_epoch(model, criterion, optim, dataset, epoch=e)
 
         eval_result = eval_for_one_epoch(training_setup['dataset'], training_setup['model'])
         writer.add_figure('predictions vs. actuals', eval_result['pred_figs'], global_step=e)
@@ -49,6 +54,13 @@ def train_loop(training_setup, epoch):
         writer.add_scalar("Val/recall", eval_result['recall'], e)
     writer.flush()
     writer.close()
+
+    if training_setup['save_model_path'] is not None:
+        path = training_setup['save_model_path']
+        model_state_dict = training_setup['model'].state_dict()
+        optimizer_state_dict = training_setup['optimizer'].state_dict()
+        loss = training_setup['criterion']
+        save_model(model_state_dict, optimizer_state_dict, loss, epoch, path)
 
 
 def training_setup(args):
@@ -58,6 +70,7 @@ def training_setup(args):
     training_setup['criterion'] = nn.CrossEntropyLoss()
     training_setup['optimizer'] = optim.SGD(training_setup['model'].parameters(), lr=0.001, momentum=0.9)
     training_setup['writer'] = SummaryWriter()
+    training_setup['save_model_path'] = args.save_model_path
 
     return training_setup
 
@@ -76,6 +89,7 @@ if __name__ == '__main__':
     parser.add_argument('--training_epoch', type=int, default=1)
     parser.add_argument('--train_batch_size', type=int, default=32)
     parser.add_argument('--test_batch_size', type=int, default=128)
+    parser.add_argument('--save_model_path', type=str, default=None)
     args = parser.parse_args()
     torch.backends.cudnn.benchmark = True
     train(args)
