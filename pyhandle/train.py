@@ -11,16 +11,16 @@ from utils.eval_utils import eval_for_one_epoch
 from utils.pytorch_utils import save_model
 
 
-def train_for_one_step(model, criterion, optimizer, dataset, loss_container):
-    inputs, labels = dataset.read_train()
-
+def train_for_one_step(model, criterion, optimizer, inputs, labels, loss_container):
     # zero the parameter gradients
-    optimizer.zero_grad()
+    # optimizer.zero_grad()
+    for param in model.parameters():
+        param.grad = None
 
     # forward + backward + optimize
-    outputs = model(inputs)
+    outputs = model(inputs.cuda())
 
-    loss = criterion(outputs, labels)
+    loss = criterion(outputs, labels.cuda())
     loss.backward()
     optimizer.step()
     loss_container[0] = loss.item()
@@ -30,13 +30,16 @@ def train_for_one_step(model, criterion, optimizer, dataset, loss_container):
 
 def train_for_one_epoch(model, criterion, optimizer, dataset, epoch, writer=None):
     losses = [0.]
+    step = 0
     step_per_epoch = len(dataset.train_loader)
-    step_to_draw_loss = int(step_per_epoch / 1000) + 1
-    for step in range(step_per_epoch):
-        train_for_one_step(model, criterion, optimizer, dataset, losses)
+    step_to_draw_loss = int(step_per_epoch / 100) + 1
+    for images, labels in dataset.train_loader:
+        train_for_one_step(model, criterion, optimizer, images, labels, losses)
 
         if writer is not None and step % step_to_draw_loss == 0:
             writer.add_scalar("Loss/train", losses[0], step + epoch * step_per_epoch)
+
+        step += 1
 
 
 def train_loop(training_setup, epoch):
@@ -45,8 +48,10 @@ def train_loop(training_setup, epoch):
     optim = training_setup['optimizer']
     dataset = training_setup['dataset']
     writer = training_setup['writer']
+
     for e in range(epoch):
-        train_for_one_epoch(model, criterion, optim, dataset, epoch=e)
+        model.train()
+        train_for_one_epoch(model, criterion, optim, dataset, epoch=e, writer=writer)
 
         eval_result = eval_for_one_epoch(training_setup['dataset'], training_setup['model'])
         writer.add_figure('predictions vs. actuals', eval_result['pred_figs'], global_step=e)
