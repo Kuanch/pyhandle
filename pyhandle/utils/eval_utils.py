@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+from dataset.data_prefetch import data_prefetcher
 from utils.matplot_utils import plot_classes_preds
 
 
@@ -39,11 +40,13 @@ def pred_and_draw_image(model, dataset):
 def metric_eval(total_step, model, dataset):
     TP = FP = TN = FN = 0
     loader = dataset.test_loader
-    for images, labels in loader:
-        preds = model(images.cuda())
+    prefetcher = data_prefetcher(loader)
+    images, labels = prefetcher.next()
+    while images is not None:
+        preds = model(images)
         _, class_preds_batch = torch.max(preds, 1)
 
-        np_labels = labels.numpy()
+        np_labels = labels.cpu().numpy()
         np_preds = class_preds_batch.cpu().numpy()
 
         TP += sum(np_labels[np.where(np_preds == 1)[0]] == 1)
@@ -51,7 +54,9 @@ def metric_eval(total_step, model, dataset):
         TN += sum(np_labels[np.where(np_preds == 0)[0]] == 0)
         FN += sum(np_labels[np.where(np_preds == 0)[0]] == 1)
 
-        precision = TP / (TP + FP)
-        recall = TP / (TP + FN)
+        images, labels = prefetcher.next()
 
-        return precision, recall
+    precision = TP / (TP + FP)
+    recall = TP / (TP + FN)
+
+    return precision, recall
