@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
 from net import network
-from dataset import dataloader
+from dataset import dataloader, data_prefetch
 from optim.get_optimizer import get_optim
 from utils.eval_utils import eval_for_one_epoch
 from utils.pytorch_utils import save_model
@@ -18,9 +18,9 @@ def train_for_one_step(model, criterion, optimizer, inputs, labels, loss_contain
         param.grad = None
 
     # forward + backward + optimize
-    outputs = model(inputs.cuda())
+    outputs = model(inputs)
 
-    loss = criterion(outputs, labels.cuda())
+    loss = criterion(outputs, labels)
     loss.backward()
     optimizer.step()
     loss_container[0] = loss.item()
@@ -28,17 +28,19 @@ def train_for_one_step(model, criterion, optimizer, inputs, labels, loss_contain
     del loss
 
 
-def train_for_one_epoch(model, criterion, optimizer, dataset, epoch, writer=None):
-    losses = [0.]
+def train_for_one_epoch(model, criterion, optimizer, dataset, epoch, step_per_epoch, writer=None):
     step = 0
-    step_per_epoch = len(dataset.train_loader)
+    losses = [0.]
     step_to_draw_loss = int(step_per_epoch / 100) + 1
-    for images, labels in dataset.train_loader:
-        train_for_one_step(model, criterion, optimizer, images, labels, losses)
+    data_fetcher = data_prefetch.data_prefetcher(dataset.train_loader)
+    inputs, labels = data_fetcher.next()
+    while inputs is not None:
+        train_for_one_step(model, criterion, optimizer, inputs, labels, losses)
 
         if writer is not None and step % step_to_draw_loss == 0:
             writer.add_scalar("Loss/train", losses[0], step + epoch * step_per_epoch)
 
+        inputs, labels = data_fetcher.next()
         step += 1
 
 
@@ -49,9 +51,10 @@ def train_loop(training_setup, epoch):
     dataset = training_setup['dataset']
     writer = training_setup['writer']
 
+    step_per_epoch = len(dataset.train_loader)
     for e in range(epoch):
         model.train()
-        train_for_one_epoch(model, criterion, optim, dataset, epoch=e, writer=writer)
+        train_for_one_epoch(model, criterion, optim, dataset, e, step_per_epoch, writer=writer)
 
         eval_result = eval_for_one_epoch(training_setup['dataset'], training_setup['model'])
         writer.add_figure('predictions vs. actuals', eval_result['pred_figs'], global_step=e)
