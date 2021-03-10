@@ -2,11 +2,11 @@ import argparse
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from net import network
 from dataset import dataloader
+from optim.get_optimizer import get_optim
 from utils.eval_utils import eval_for_one_epoch
 from utils.pytorch_utils import save_model
 
@@ -73,7 +73,7 @@ def training_setup(args):
     training_setup['model'] = network.get_classifier(args.model_name, num_classes=args.num_classes).cuda()
     training_setup['dataset'] = dataloader.TorchLoader(args.dataset_name, train_batch_size=args.train_batch_size, test_batch_size=args.test_batch_size)
     training_setup['criterion'] = nn.CrossEntropyLoss()
-    training_setup['optimizer'] = optim.SGD(training_setup['model'].parameters(), lr=0.001, momentum=0.9)
+    training_setup['optimizer'] = get_optim('SGD', training_setup['model'].parameters(), args.lr)
     training_setup['writer'] = SummaryWriter()
     training_setup['save_model_path'] = args.save_model_path
 
@@ -92,6 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_classes', type=int, default=10)
     parser.add_argument('--dataset_path', default=None)
     parser.add_argument('--training_epoch', type=int, default=1)
+    parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--train_batch_size', type=int, default=32)
     parser.add_argument('--test_batch_size', type=int, default=128)
     parser.add_argument('--save_model_path', type=str, default=None)
