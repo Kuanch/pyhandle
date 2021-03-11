@@ -6,6 +6,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from net import network
 from dataset import dataloader, data_prefetch
+from preprocess.preprocess import get_preprocessor
 from optim.get_optimizer import get_optim
 from utils.eval_utils import eval_for_one_epoch
 from utils.pytorch_utils import save_model
@@ -68,13 +69,15 @@ def train_loop(training_setup, epoch):
         model_state_dict = training_setup['model'].state_dict()
         optimizer_state_dict = training_setup['optimizer'].state_dict()
         loss = training_setup['criterion']
-        save_model(model_state_dict, optimizer_state_dict, loss, epoch, path)
+        preprocessor = training_setup['preprocessor']
+        save_model(model_state_dict, optimizer_state_dict, preprocessor, loss, epoch, path)
 
 
 def training_setup(args):
     training_setup = {}
     training_setup['model'] = network.get_classifier(args.model_name, num_classes=args.num_classes).cuda()
-    training_setup['dataset'] = dataloader.TorchLoader(args.dataset_name, train_batch_size=args.train_batch_size, test_batch_size=args.test_batch_size)
+    training_setup['preprocessor'] = get_preprocessor(args.dataset_name)
+    training_setup['dataset'] = dataloader.TorchLoader(args.dataset_name, transform=training_setup['preprocessor'], train_batch_size=args.train_batch_size, test_batch_size=args.test_batch_size)
     training_setup['criterion'] = nn.CrossEntropyLoss()
     training_setup['optimizer'] = get_optim('SGD', training_setup['model'].parameters(), args.lr)
     training_setup['writer'] = SummaryWriter()
@@ -99,6 +102,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_batch_size', type=int, default=32)
     parser.add_argument('--test_batch_size', type=int, default=128)
     parser.add_argument('--save_model_path', type=str, default=None)
+    parser.add_argument('--if_eval', type=bool, default=False)
     args = parser.parse_args()
     torch.backends.cudnn.benchmark = True
     train(args)
