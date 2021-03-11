@@ -5,12 +5,17 @@ import torchvision.transforms as transforms
 
 class TorchLoader(object):
     def __init__(self, dataset_name,
+                 transform=None,
                  train_batch_size=16,
                  test_batch_size=8,
                  data_path=None,
                  num_gpu=1):
-        transform = transforms.Compose([transforms.ToTensor(),
-                                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        if transform is None:
+            transform = transforms.Compose([transforms.ToTensor()])
+
+        if not isinstance(transform, transforms.Compose):
+            raise TypeError('Preprocessor must be transforms.Compose type!')
+
         if hasattr(torchvision.datasets, dataset_name):
 
             train_set = getattr(torchvision.datasets, dataset_name)(root='./data',
